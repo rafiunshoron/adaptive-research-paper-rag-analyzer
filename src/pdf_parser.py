@@ -3,6 +3,7 @@ from collections import Counter
 from pathlib import Path
 
 from langchain_core.documents import Document
+from pypdf import PdfReader
 from unstructured.partition.pdf import partition_pdf
 
 
@@ -16,6 +17,39 @@ SUPPORTED_STRATEGIES = {
     "fast",
     "hi_res",
 }
+
+
+def parse_with_pypdf(
+    pdf_path: Path,
+) -> list[Document]:
+    """Extract text page by page when Unstructured returns no text."""
+
+    reader = PdfReader(str(pdf_path))
+    documents: list[Document] = []
+
+    for page_number, page in enumerate(
+        reader.pages,
+        start=1,
+    ):
+        text = (page.extract_text() or "").strip()
+
+        if not text:
+            continue
+
+        documents.append(
+            Document(
+                page_content=text,
+                metadata={
+                    "source": pdf_path.name,
+                    "element_type": "NarrativeText",
+                    "element_index": page_number - 1,
+                    "page_number": page_number,
+                    "parser": "pypdf",
+                },
+            )
+        )
+
+    return documents
 
 
 def parse_pdf(
@@ -41,14 +75,20 @@ def parse_pdf(
             f"Unsupported PDF strategy: {strategy}"
         )
 
-    elements = partition_pdf(
-        filename=str(pdf_path),
-        strategy=strategy,
-        infer_table_structure=(
-            strategy == "hi_res"
-        ),
-        languages=["eng"],
-    )
+    try:
+        elements = partition_pdf(
+            filename=str(pdf_path),
+            strategy=strategy,
+            infer_table_structure=(
+                strategy == "hi_res"
+            ),
+            languages=["eng"],
+        )
+    except Exception:
+        if strategy != "fast":
+            raise
+
+        elements = []
 
     documents: list[Document] = []
 
@@ -101,6 +141,11 @@ def parse_pdf(
                 page_content=text,
                 metadata=metadata,
             )
+        )
+
+    if not documents and strategy == "fast":
+        documents = parse_with_pypdf(
+            pdf_path
         )
 
     if not documents:
