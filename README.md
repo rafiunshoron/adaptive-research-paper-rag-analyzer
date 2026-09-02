@@ -1,4 +1,9 @@
 # Adaptive Research Paper RAG Analyzer
+## Live Demo
+
+Try the deployed application:
+
+[Open Adaptive Research Paper RAG Analyzer](https://adaptive-research-paper-rag-analyzer.streamlit.app/)
 
 A Streamlit application for uploading a research paper and asking grounded, conversational questions with source citations. The system uses adaptive query routing to decide whether a message requires document retrieval or a direct conversational response.
 
