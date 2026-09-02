@@ -73,6 +73,19 @@ def group_elements_by_section(
         tuple[str, list[Document]]
     ] = []
 
+    if any(
+        document.metadata.get("parser")
+        == "pypdf"
+        for document in documents
+    ):
+        return [
+            (
+                f"Page {document.metadata.get('page_number', '?')}",
+                [document],
+            )
+            for document in documents
+        ]
+
     remaining_documents = documents
 
     if preserve_front_matter:
